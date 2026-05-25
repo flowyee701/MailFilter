@@ -1,0 +1,32 @@
+[package]
+name = "mailmind"
+version = "0.1.0"
+description = "MailMind - smart corporate email filter"
+authors = ["you"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.70"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.6", features = [ "fs-read-file", "fs-exists", "fs-write-file", "fs-create-dir",
+  "shell-open",
+  "notification-all",
+  "dialog-all",
+  "path-all",
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
+anyhow = "1.0"
+thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+keyring = "2.3"
+dirs = "5.0"
+tokio = { version = "1", features = ["full"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

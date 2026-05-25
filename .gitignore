@@ -1,0 +1,36 @@
+# Node
+node_modules
+dist
+dist-ssr
+*.local
+
+# Tauri
+src-tauri/target
+src-tauri/Cargo.lock
+src-tauri/gen
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# App data
+*.sqlite
+*.sqlite-journal
+*.db
+mailmind.db
+
+# Build artifacts (do not commit binaries)
+*.dmg
+*.app
+*.app.tar.gz
+
+# IDE / OS / agents
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+.claude/
+*.log
