@@ -1,10 +1,111 @@
-# MailMind
+<div align="center">
+  <img src="logo.png" width="128" alt="MailMind icon" />
 
-> **Local-first smart inbox triage for macOS.** Pulls your mail over IMAP,
-> classifies each message into 🔴 *requires reply* / 🟡 *important* /
-> 📅 *event* / 🗑️ *noise* using a local Ollama model, generates draft replies,
-> and produces a morning digest. **No cloud, no telemetry, no API keys —
-> everything runs on your Mac.** See [PRIVACY.md](PRIVACY.md).
+  # MailMind
+
+  **Smart, private email triage for your Mac.**
+
+  Sorts your inbox into 🔴 *requires reply* · 🟡 *important* · 📅 *events* · 🗑️ *noise*
+  using a **local** AI model. Nothing leaves your computer.
+
+  [![Latest release](https://img.shields.io/github/v/release/flowyee701/MailFilter?color=5b8cff&label=latest)](https://github.com/flowyee701/MailFilter/releases/latest)
+  [![Downloads](https://img.shields.io/github/downloads/flowyee701/MailFilter/total?color=5b8cff)](https://github.com/flowyee701/MailFilter/releases/latest)
+  [![License: MIT](https://img.shields.io/badge/license-MIT-5b8cff)](LICENSE)
+  [![Platform](https://img.shields.io/badge/platform-macOS%2011%2B%20·%20Apple%20Silicon-success)](#)
+  [![Privacy](https://img.shields.io/badge/privacy-100%25%20local-22c55e)](PRIVACY.md)
+</div>
+
+---
+
+## ⬇️ Download
+
+<div align="center">
+
+### [⬇ Download MailMind for Mac](https://github.com/flowyee701/MailFilter/releases/latest)
+
+The latest `.dmg` is attached to every release — about 5 MB.
+
+**[📖 Full step-by-step install guide → INSTALL.md](INSTALL.md)**
+
+</div>
+
+> **Requires:** Mac with Apple Silicon (M1 / M2 / M3 / M4), macOS 11 or newer.
+> Intel Macs need to [build from source](#build-from-source).
+
+---
+
+## What it does
+
+Pulls mail from any IMAP server (Yandex 360, Gmail, iCloud, generic IMAPS),
+runs each new message through a **local** [Ollama](https://ollama.com) language
+model, and shows your inbox already triaged into four buckets:
+
+| | | |
+|---|---|---|
+| 🔴 | **Requires reply** | Someone is waiting for an answer from you |
+| 🟡 | **Important** | Reports, company news, deliverables |
+| 📅 | **Events** | Meeting invites, webinars, RSVPs |
+| 🗑️ | **Noise** | Newsletters, automated alerts, marketing |
+
+Plus:
+
+- ✍️ **One-click draft replies** — language and tone match the original
+- ☕ **Morning digest** — native macOS notification each day at your chosen hour
+- 🎓 **Learns from your corrections** — change a category, and the classifier
+  uses your decision as a hint on the next sync
+- ⚡ **Heuristic pre-filter** skips obvious noise (no-reply@, newsletters,
+  build bots) without burning an LLM call — typically 30–60% of corporate mail
+- 🏛️ **Built-in presets for HSE corporate / Yandex personal / custom IMAP**
+
+## Privacy
+
+**100% local. Zero telemetry. No cloud. No third-party APIs.**
+[Read the full audit-friendly PRIVACY.md →](PRIVACY.md)
+
+The only network connections this app ever makes:
+1. Your IMAP server (TLS, port 993) — to fetch your own mail
+2. Your local Ollama at `127.0.0.1:11434` — to classify text
+3. *Optional, only if you click "Download model" in onboarding:* Ollama
+   contacts `registry.ollama.ai` to fetch the AI model — same request
+   `ollama pull` makes on the command line. No user content sent.
+
+Verifiable with Little Snitch / Lulu / tcpdump.
+
+---
+
+## For end users
+
+[**📖 Open INSTALL.md →**](INSTALL.md) for the friendly step-by-step:
+download, drag to Applications, first-launch consent, onboarding wizard,
+mailbox setup. No Terminal required.
+
+---
+
+## For developers
+
+### Build from source
+
+```bash
+# Toolchains (one-time)
+brew install node ollama python
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+xcode-select --install
+
+# Clone and run
+git clone https://github.com/flowyee701/MailFilter.git
+cd MailFilter
+npm install
+npm run tauri:dev      # development with hot reload
+
+# Or build a production .app + .dmg
+npm run tauri:build
+# Outputs: src-tauri/target/release/bundle/{macos,dmg}/
+```
+
+Python sidecar deps auto-install on first launch into
+`~/Library/Application Support/MailMind/python/.venv/`.
+
+### Architecture
 
 ```
 +----------------+    JSON      +----------------+    HTTP     +-----------+
@@ -17,168 +118,81 @@
                                   (fetch / classify / draft / digest)
 ```
 
-## Features
-
-- 📥 IMAP fetcher with built-in **HSE corporate (Yandex 360)** and **Yandex
-  personal** presets — one click and the right host/port/login format is
-  filled in for you.
-- 🧠 Local LLM classification via Ollama. Default model `mistral` (7B); switch
-  to `qwen2.5:3b` or `llama3.2:3b` for 2–4× the speed on Apple Silicon.
-- ⚡ **Heuristic pre-filter** skips obvious noise (no-reply@, newsletters,
-  JIRA bots, mailer-daemons) without burning a single LLM token — cuts a
-  typical sync time by 30–60%.
-- ✍️ **One-click draft replies** for any "Requires reply" email, in the same
-  language and tone as the incoming message.
-- ☕ **Morning digest** auto-generated each day at your chosen hour, with a
-  native macOS notification preview.
-- 🎓 **Learn from corrections.** Every time you change an email's category,
-  the (sender, subject, new category) tuple becomes a few-shot example for
-  the next classification pass.
-- 🔒 **App-password aware.** Built around the reality that corporate SSO
-  (HSE → LMS, Okta, etc.) can't drive IMAP — clear in-app guidance walks you
-  through generating the right token.
-
-## Privacy
-
-**Read [PRIVACY.md](PRIVACY.md) for the full breakdown.** Short version:
-
-- The only network connections MailMind makes are to your **IMAP server**
-  (TLS, port 993) and your **local Ollama** (`127.0.0.1:11434`).
-- No telemetry, no analytics, no third-party API.
-- Password lives in macOS Keychain. Emails live in a local SQLite at
-  `~/Library/Application Support/MailMind/`. Neither ever leaves your Mac.
-- One-line wipe instructions in PRIVACY.md.
-
-## Installing
-
-### Option A — Pre-built `.dmg` (Apple Silicon)
-
-Grab the latest `.dmg` from the [Releases page](https://github.com/flowyee701/MailFilter/releases),
-double-click, drag MailMind to Applications.
-
-> **Gatekeeper note** — the binary is **not** Apple-notarized (notarization
-> needs a paid Developer Program account). The first time you launch:
-> **right-click → Open → Open**, and macOS will remember the exception. If
-> you see "MailMind is damaged and can't be opened," run:
-> ```bash
-> xattr -dr com.apple.quarantine /Applications/MailMind.app
-> ```
-
-You still need to install the runtime dependencies (one-time):
-
-```bash
-# Ollama (the local LLM runtime)
-brew install ollama
-brew services start ollama
-ollama pull qwen2.5:3b      # or: ollama pull mistral
-
-# Python 3 + requests (used by the IMAP / classifier sidecars)
-brew install python          # if you don't already have python3
-# MailMind auto-creates a venv on first launch and installs `requests` into it
-```
-
-### Option B — Build from source
-
-```bash
-# 1. Toolchains
-brew install node ollama python
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-xcode-select --install   # Tauri needs the Xcode Command Line Tools
-
-# 2. Clone + install
-git clone https://github.com/flowyee701/MailFilter.git
-cd MailFilter
-npm install
-python3 -m venv python/.venv
-python/.venv/bin/python -m pip install -r python/requirements.txt
-
-# 3. Start Ollama and pull a model
-brew services start ollama
-ollama pull qwen2.5:3b
-
-# 4. Dev mode (hot-reload)
-npm run tauri:dev
-
-# 5. Or build a production .app + .dmg
-npm run tauri:build
-# Output: src-tauri/target/release/bundle/{macos,dmg}/
-```
-
-## First-launch checklist
-
-1. Open **Settings** in the sidebar.
-2. Pick your **Account preset** (HSE corporate / Yandex personal / Custom).
-3. Generate an **app password** at the URL the help panel shows. *Why an app
-   password?* IMAP is a 1980s protocol and cannot drive a web SSO flow — every
-   IMAP client (Apple Mail, Thunderbird…) uses an app password for the same
-   reason. See the panel in Settings for step-by-step instructions.
-4. Paste the app password → **Save** → **Test connection** should show ✓.
-5. **Sync inbox** in the sidebar. The first sync fetches the last 20 emails
-   and classifies them through Ollama. Subsequent syncs reuse the warm model.
-6. Click any email → use the four category pills at the top to recategorize.
-   Your corrections feed the classifier on the next sync.
-
-## Performance tuning
-
-The classifier calls Ollama for every email it can't pre-filter, and Mistral 7B
-on Apple Silicon costs ~2–10 seconds per call. Three knobs:
-
-1. **Use a smaller model.** `qwen2.5:3b` or `llama3.2:3b` classify short text
-   essentially as well as Mistral 7B at 2–4× the speed:
-   ```bash
-   ollama pull qwen2.5:3b
-   ```
-   Then Settings → Ollama → Model → `qwen2.5:3b` → Save.
-2. **Lower Fetch limit** (Settings → IMAP → Fetch limit). Default is 20.
-3. **Heuristic pre-filter is already on.** Edit `NOISE_FROM_PATTERNS` /
-   `NOISE_SUBJECT_PATTERNS` near the top of `python/classify.py` to tune it
-   — no rebuild needed, Python scripts are spawned fresh each sync.
-
-## File layout
+### File layout
 
 ```
 MailFilter/
-├── LICENSE, PRIVACY.md, README.md
+├── README.md, INSTALL.md, PRIVACY.md, LICENSE
+├── logo.png, scripts/make_logo.py     # reproducible app icon
 ├── package.json, vite.config.ts, tailwind.config.js, tsconfig*.json, index.html
-├── src/                        # React + Tailwind frontend
+├── src/                       # React + Tailwind frontend
 │   ├── App.tsx, main.tsx, index.css
-│   ├── lib/{api.ts,types.ts}   # invoke() wrappers + shared types
-│   └── components/{Sidebar,Inbox,EmailDetail,DraftModal,Settings,DigestView}.tsx
-├── src-tauri/                  # Rust backend
+│   ├── lib/{api.ts,types.ts}  # invoke() wrappers + shared types
+│   └── components/
+│       ├── Sidebar.tsx        # category nav with unread badges
+│       ├── Inbox.tsx          # email list (grouped or filtered)
+│       ├── EmailDetail.tsx    # body + recategorize + draft button
+│       ├── DraftModal.tsx     # editable draft + copy to clipboard
+│       ├── Settings.tsx       # IMAP / Ollama / digest config
+│       ├── DigestView.tsx
+│       └── Onboarding.tsx     # first-run wizard
+├── src-tauri/                 # Rust backend
 │   ├── Cargo.toml, tauri.conf.json, build.rs
 │   └── src/
-│       ├── main.rs             # Tauri builder + invoke handlers
-│       ├── commands.rs         # All #[tauri::command] entry points
-│       ├── db.rs               # SQLite schema + connection
-│       ├── settings.rs         # Settings struct, Keychain integration
-│       ├── python.rs           # Spawn python scripts, JSON over stdio
-│       └── scheduler.rs        # Daily digest timer + native notification
-└── python/                     # Python sidecars (spawned by Rust as subprocesses)
-    ├── requirements.txt        # only `requests`
-    ├── mm_io.py                # read JSON stdin, write JSON stdout
-    ├── _ollama.py              # tiny HTTP client for Ollama /api/generate
-    ├── fetch_emails.py         # imaplib → list of parsed messages
-    ├── classify.py             # one email → {category, confidence} (+ noise heuristics)
-    ├── draft.py                # one email → polite reply body
-    └── digest.py               # 24h of emails → markdown summary
+│       ├── main.rs            # Tauri builder + invoke handlers
+│       ├── commands.rs        # all #[tauri::command] entry points
+│       ├── db.rs              # SQLite schema + connection
+│       ├── settings.rs        # Settings struct + Keychain integration
+│       ├── ollama.rs          # /api/tags, /api/pull (streaming progress)
+│       ├── python.rs          # spawn python scripts, JSON over stdio
+│       └── scheduler.rs       # daily digest timer + native notification
+└── python/                    # Python sidecars (spawned by Rust as subprocesses)
+    ├── requirements.txt       # only `requests`
+    ├── mm_io.py               # read JSON stdin, write JSON stdout
+    ├── _ollama.py             # tiny HTTP client for Ollama /api/generate
+    ├── fetch_emails.py        # imaplib → list of parsed messages
+    ├── classify.py            # one email → {category, confidence}
+    ├── draft.py               # one email → polite reply body
+    └── digest.py              # 24h of emails → markdown summary
 ```
 
-## Troubleshooting
+### Performance tuning
+
+The classifier calls Ollama for every email it can't pre-filter. On Apple
+Silicon, Mistral 7B costs 2–10 s per call. Three knobs:
+
+1. **Use a smaller model.** `qwen2.5:3b` or `llama3.2:3b` classify short text
+   as well as Mistral 7B at 2–4× the speed. The onboarding wizard recommends
+   `qwen2.5:3b` by default.
+2. **Lower Fetch limit** (Settings → IMAP → Fetch limit). Default 20.
+3. **Heuristic pre-filter is already on.** Edit `NOISE_FROM_PATTERNS` /
+   `NOISE_SUBJECT_PATTERNS` near the top of `python/classify.py`.
+
+### Regenerating the app icon
+
+```bash
+python/.venv/bin/python scripts/make_logo.py
+npx @tauri-apps/cli icon logo.png
+```
+
+`make_logo.py` is the canonical source — tweak the gradient / sparkle / dot
+colors in there, rerun the two commands, and the full multi-size icon set
+under `src-tauri/icons/` regenerates.
+
+### Troubleshooting
 
 - **`python3` not found**: install via `brew install python` or from python.org.
-  Or set `MAILMIND_PYTHON=/full/path/to/python` in your environment before launching.
-- **"No module named 'requests'"**: run `python/.venv/bin/python -m pip install -r python/requirements.txt`.
-- **Ollama connection refused**: `curl http://localhost:11434/api/tags` should
-  return JSON. If not, run `brew services start ollama` (or open the Ollama app).
-- **Classifier always returns "noise"**: the model occasionally ignores the
-  JSON format hint. Switch to a stronger small model: `ollama pull qwen2.5:3b`
-  and update Settings → Model.
+- **Ollama connection refused**: `curl http://localhost:11434/api/tags`
+  should return JSON. If not, open the Ollama app, or `brew services start ollama`.
+- **Classifier always returns "noise"**: switch to a stronger small model:
+  `ollama pull qwen2.5:3b` and update Settings → Model.
 - **Yandex login fails**: confirm you generated an *app password* — the
   regular account password is rejected over IMAP since 2023.
-- **Keychain prompt on every sync**: in the macOS Keychain dialog, click
-  **Always Allow** (not just "Allow"). The "exec" lock icon is normal for an
-  unsigned dev build.
+- **Keychain prompt on every sync**: click **Always Allow** (not just "Allow")
+  in the macOS Keychain dialog.
+
+---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE) — do whatever you want with it, no warranty.
