@@ -9,11 +9,20 @@ interface Props {
   onSync: () => void;
   syncing: boolean;
   lastSyncMsg: string;
+  onReRunSetup?: () => void;
 }
 
 const CATEGORIES: Category[] = ["reply", "important", "event", "noise"];
 
-export function Sidebar({ view, counts, onNavigate, onSync, syncing, lastSyncMsg }: Props) {
+export function Sidebar({
+  view,
+  counts,
+  onNavigate,
+  onSync,
+  syncing,
+  lastSyncMsg,
+  onReRunSetup,
+}: Props) {
   const isActive = (cat: Category | "all") =>
     view.kind === "inbox" && view.category === cat;
 
@@ -74,6 +83,13 @@ export function Sidebar({ view, counts, onNavigate, onSync, syncing, lastSyncMsg
           active={view.kind === "settings"}
           onClick={() => onNavigate({ kind: "settings" })}
         />
+        {onReRunSetup && (
+          <NavRow
+            label="Re-run setup"
+            icon="🛠️"
+            onClick={onReRunSetup}
+          />
+        )}
       </nav>
 
       <div className="px-4 py-3 border-t border-border text-[11px] text-muted">

@@ -46,6 +46,30 @@ export interface CategoryCounts {
   noise: number;
 }
 
+export interface OllamaDiagnostics {
+  running: boolean;
+  app_installed: boolean;
+  cli_installed: boolean;
+  models: string[];
+}
+
+export interface SetupStatus {
+  ollama: OllamaDiagnostics;
+  imap_configured: boolean;
+  model_in_settings: string;
+  python_ok: boolean;
+}
+
+export interface PullProgress {
+  model: string;
+  status: string;
+  completed: number;
+  total: number;
+  percent: number;
+  done: boolean;
+  error: string | null;
+}
+
 export const CATEGORY_META: Record<Category, { label: string; icon: string; color: string }> = {
   reply:     { label: "Requires reply", icon: "🔴", color: "text-reply" },
   important: { label: "Important",      icon: "🟡", color: "text-important" },

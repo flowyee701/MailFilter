@@ -2,6 +2,7 @@
 
 mod commands;
 mod db;
+mod ollama;
 mod python;
 mod settings;
 mod scheduler;
@@ -34,6 +35,9 @@ fn main() {
             commands::generate_draft,
             commands::generate_digest,
             commands::category_counts,
+            commands::setup_status,
+            commands::ollama_try_start,
+            commands::ollama_pull_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

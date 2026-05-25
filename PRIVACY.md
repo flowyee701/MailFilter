@@ -21,9 +21,15 @@ exactly what data the app touches, where it lives, and what it never does.
    own mail. This is exactly what Apple Mail / Thunderbird do.
 2. **Your local Ollama** at `http://127.0.0.1:11434` (loopback only), to
    classify and draft text. Ollama itself runs entirely on your machine.
+3. **When you click "Download model" in the first-run wizard**, the app asks
+   your local Ollama to fetch a model — Ollama then connects out to
+   `registry.ollama.ai` (their CDN) to download it. This is the same request
+   `ollama pull <model>` makes on the command line. The connection is between
+   *Ollama and its registry* — no user content is sent. Equivalent to
+   `brew install <package>` contacting Homebrew's CDN.
 
 That's it. You can verify this with `tcpdump` / Little Snitch / Lulu — the
-only sockets the app opens are to those two endpoints.
+only sockets the app opens are to those endpoints.
 
 ## What is stored locally, and where
 

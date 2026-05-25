@@ -1,4 +1,5 @@
-use crate::{db, python, settings, AppState};
+use crate::{db, ollama, python, settings, AppState};
+use tauri::AppHandle;
 use chrono::Utc;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
@@ -62,6 +63,46 @@ pub struct SyncSummary {
     pub new: usize,
     pub classified: usize,
     pub errors: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SetupStatus {
+    pub ollama: ollama::Diagnostics,
+    pub imap_configured: bool,
+    pub model_in_settings: String,
+    pub python_ok: bool,
+}
+
+#[tauri::command]
+pub fn setup_status(state: State<AppState>) -> Result<SetupStatus, String> {
+    let s = {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        settings::load(&conn).map_err(|e| e.to_string())?
+    };
+    let ollama = ollama::diagnose(&s.ollama_url);
+    let imap_configured = !s.login.is_empty() && !s.imap_host.is_empty();
+    let python_ok = python::bootstrap().is_ok();
+    Ok(SetupStatus {
+        ollama,
+        imap_configured,
+        model_in_settings: s.model,
+        python_ok,
+    })
+}
+
+#[tauri::command]
+pub fn ollama_try_start() -> Result<bool, String> {
+    Ok(ollama::try_start())
+}
+
+#[tauri::command]
+pub fn ollama_pull_model(handle: AppHandle, state: State<AppState>, model: String) -> Result<(), String> {
+    let url = {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        settings::load(&conn).map_err(|e| e.to_string())?.ollama_url
+    };
+    ollama::pull_model(handle, &url, &model);
+    Ok(())
 }
 
 #[tauri::command]

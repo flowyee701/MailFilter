@@ -3,6 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Inbox } from "./components/Inbox";
 import { Settings } from "./components/Settings";
 import { DigestView } from "./components/DigestView";
+import { Onboarding } from "./components/Onboarding";
 import { api } from "./lib/api";
 import type { Category, CategoryCounts } from "./lib/types";
 
@@ -11,7 +12,10 @@ export type View =
   | { kind: "settings" }
   | { kind: "digest" };
 
+type Boot = "checking" | "onboarding" | "ready";
+
 export default function App() {
+  const [boot, setBoot] = useState<Boot>("checking");
   const [view, setView] = useState<View>({ kind: "inbox", category: "reply" });
   const [counts, setCounts] = useState<CategoryCounts>({
     reply: 0,
@@ -22,6 +26,23 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncMsg, setLastSyncMsg] = useState<string>("");
 
+  // First-boot setup check: show Onboarding when something's missing.
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await api.setupStatus();
+        const needsOnboarding =
+          !s.ollama.running ||
+          s.ollama.models.length === 0 ||
+          !s.python_ok;
+        setBoot(needsOnboarding ? "onboarding" : "ready");
+      } catch {
+        // Something went wrong; show the onboarding so the user has a path forward.
+        setBoot("onboarding");
+      }
+    })();
+  }, []);
+
   const refreshCounts = useCallback(async () => {
     try {
       setCounts(await api.categoryCounts());
@@ -31,8 +52,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    refreshCounts();
-  }, [refreshCounts]);
+    if (boot === "ready") refreshCounts();
+  }, [boot, refreshCounts]);
 
   const doSync = useCallback(async () => {
     setSyncing(true);
@@ -51,6 +72,38 @@ export default function App() {
     }
   }, [refreshCounts]);
 
+  if (boot === "checking") {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-bg text-muted text-sm">
+        Starting…
+      </div>
+    );
+  }
+
+  if (boot === "onboarding") {
+    return (
+      <div className="flex h-full w-full bg-bg text-text">
+        <Onboarding
+          onFinish={async () => {
+            // After onboarding, drop into Settings if email isn't configured yet,
+            // otherwise straight to the inbox.
+            try {
+              const s = await api.setupStatus();
+              setView(
+                s.imap_configured
+                  ? { kind: "inbox", category: "reply" }
+                  : { kind: "settings" },
+              );
+            } catch {
+              setView({ kind: "settings" });
+            }
+            setBoot("ready");
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full w-full bg-bg text-text">
       <Sidebar
@@ -60,6 +113,7 @@ export default function App() {
         onSync={doSync}
         syncing={syncing}
         lastSyncMsg={lastSyncMsg}
+        onReRunSetup={() => setBoot("onboarding")}
       />
       <main className="flex-1 min-w-0 overflow-hidden">
         {view.kind === "inbox" && (

@@ -1,6 +1,6 @@
 [package]
 name = "mailmind"
-version = "0.1.0"
+version = "0.2.0"
 description = "MailMind - smart corporate email filter"
 authors = ["you"]
 license = "MIT"
@@ -26,6 +26,7 @@ chrono = { version = "0.4", features = ["serde"] }
 keyring = "2.3"
 dirs = "5.0"
 tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "blocking"] }
 
 [features]
 default = ["custom-protocol"]
