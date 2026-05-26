@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { api } from "../lib/api";
 import { CATEGORY_META, type Category, type EmailFull } from "../lib/types";
 import { DraftModal } from "./DraftModal";
+import { useT } from "../i18n";
 
 interface Props {
   id: number;
@@ -12,6 +13,7 @@ interface Props {
 const CATEGORIES: Category[] = ["reply", "important", "event", "noise"];
 
 export function EmailDetail({ id, onMutated }: Props) {
+  const t = useT();
   const [email, setEmail] = useState<EmailFull | null>(null);
   const [loading, setLoading] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
@@ -54,13 +56,13 @@ export function EmailDetail({ id, onMutated }: Props) {
       await load();
       setDraftOpen(true);
     } catch (e) {
-      alert(`Draft generation failed: ${e}`);
+      alert(t("email.draft_failed", { err: String(e) }));
     } finally {
       setDraftLoading(false);
     }
   };
 
-  if (loading && !email) return <Centered>Loading…</Centered>;
+  if (loading && !email) return <Centered>{t("app.loading")}</Centered>;
   if (error) return <Centered>{error}</Centered>;
   if (!email) return null;
 
@@ -69,17 +71,19 @@ export function EmailDetail({ id, onMutated }: Props) {
       <header className="px-6 py-4 border-b border-border">
         <div className="text-lg font-semibold">{email.subject}</div>
         <div className="mt-1 text-sm text-muted">
-          From <span className="text-text">{email.from_name || email.from_addr}</span>{" "}
+          {t("email.from")}{" "}
+          <span className="text-text">{email.from_name || email.from_addr}</span>{" "}
           <span>&lt;{email.from_addr}&gt;</span>
           <span className="mx-2">·</span>
           {new Date(email.received_at).toLocaleString()}
         </div>
 
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted">Category:</span>
+          <span className="text-xs text-muted">{t("email.category")}</span>
           {CATEGORIES.map((c) => {
             const active = email.category === c;
             const meta = CATEGORY_META[c];
+            const label = t(meta.labelKey);
             return (
               <button
                 key={c}
@@ -90,15 +94,15 @@ export function EmailDetail({ id, onMutated }: Props) {
                     ? "bg-accent/20 text-accent border-accent/40"
                     : "bg-panel border-border text-muted hover:text-text",
                 )}
-                title={`Mark as ${meta.label}`}
+                title={t("email.mark_as", { label })}
               >
                 <span className="mr-1">{meta.icon}</span>
-                {meta.label}
+                {label}
               </button>
             );
           })}
           <span className="ml-2 text-[10px] text-muted">
-            conf: {(email.confidence * 100).toFixed(0)}%
+            {t("email.confidence", { pct: (email.confidence * 100).toFixed(0) })}
           </span>
 
           <div className="ml-auto flex gap-2">
@@ -109,10 +113,10 @@ export function EmailDetail({ id, onMutated }: Props) {
                 className="px-3 py-1.5 rounded-md text-xs font-medium bg-accent text-white hover:opacity-90 disabled:opacity-50"
               >
                 {draftLoading
-                  ? "Drafting…"
+                  ? t("email.drafting")
                   : email.draft
-                    ? "View draft"
-                    : "Generate draft"}
+                    ? t("email.view_draft")
+                    : t("email.generate_draft")}
               </button>
             )}
           </div>

@@ -2,34 +2,37 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { api } from "../lib/api";
 import type { PullProgress, SetupStatus } from "../lib/types";
+import { useT } from "../i18n";
 
 interface ModelOption {
   id: string;
   label: string;
   size: string;
   recommended?: boolean;
-  note: string;
+  noteKey: string;
 }
 
+// Note: model labels & sizes stay as-is (they're brand names / numeric specs);
+// only the descriptive note is translated per locale.
 const MODEL_CATALOG: ModelOption[] = [
   {
     id: "qwen2.5:3b",
     label: "Qwen 2.5 (3B)",
     size: "~1.9 GB",
     recommended: true,
-    note: "Best speed/accuracy trade-off on Apple Silicon. Recommended.",
+    noteKey: "model.note.qwen",
   },
   {
     id: "llama3.2:3b",
     label: "Llama 3.2 (3B)",
     size: "~2.0 GB",
-    note: "Strong alternative to Qwen. English-focused.",
+    noteKey: "model.note.llama",
   },
   {
     id: "mistral",
     label: "Mistral 7B",
     size: "~4.4 GB",
-    note: "Larger, slower, sometimes more nuanced. Heavier on the fans.",
+    noteKey: "model.note.mistral",
   },
 ];
 
@@ -40,9 +43,10 @@ interface Props {
 }
 
 export function Onboarding({ onFinish }: Props) {
+  const t = useT();
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<string | null>(null); // which step is "working"
+  const [busy, setBusy] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>("qwen2.5:3b");
   const [pull, setPull] = useState<PullProgress | null>(null);
   const unlistenRef = useRef<null | (() => void)>(null);
@@ -52,7 +56,6 @@ export function Onboarding({ onFinish }: Props) {
     try {
       const s = await api.setupStatus();
       setStatus(s);
-      // If user previously chose a model that's already pulled, prefer it.
       if (s.ollama.models.includes(s.model_in_settings)) {
         setSelectedModel(s.model_in_settings);
       }
@@ -66,15 +69,15 @@ export function Onboarding({ onFinish }: Props) {
   useEffect(() => {
     refresh();
     let cancelled = false;
-    api.onPullProgress((p) => {
-      if (cancelled) return;
-      setPull(p);
-      if (p.done) {
-        refresh();
-      }
-    }).then((un) => {
-      unlistenRef.current = un;
-    });
+    api
+      .onPullProgress((p) => {
+        if (cancelled) return;
+        setPull(p);
+        if (p.done) refresh();
+      })
+      .then((un) => {
+        unlistenRef.current = un;
+      });
     return () => {
       cancelled = true;
       if (unlistenRef.current) unlistenRef.current();
@@ -84,7 +87,7 @@ export function Onboarding({ onFinish }: Props) {
   if (loading || !status) {
     return (
       <div className="h-full flex items-center justify-center text-muted">
-        Loading…
+        {t("app.loading")}
       </div>
     );
   }
@@ -104,7 +107,6 @@ export function Onboarding({ onFinish }: Props) {
     setBusy("ollama");
     try {
       await api.ollamaTryStart();
-      // Give it a moment, then refresh.
       await new Promise((r) => setTimeout(r, 2500));
       await refresh();
     } finally {
@@ -116,7 +118,7 @@ export function Onboarding({ onFinish }: Props) {
     setBusy("model");
     setPull({
       model: selectedModel,
-      status: "starting…",
+      status: t("onboarding.step2.starting"),
       completed: 0,
       total: 0,
       percent: 0,
@@ -124,7 +126,6 @@ export function Onboarding({ onFinish }: Props) {
       error: null,
     });
     try {
-      // Persist choice so subsequent classifies use it.
       const settings = await api.loadSettings();
       await api.saveSettings({ ...settings, model: selectedModel, password: undefined });
       await api.ollamaPullModel(selectedModel);
@@ -139,57 +140,58 @@ export function Onboarding({ onFinish }: Props) {
         error: String(e),
       });
     } finally {
-      // Pull is async-streamed; busy released by event handler when done.
-      // But re-allow user to do other steps in parallel:
       setBusy(null);
     }
   };
+
+  const step2OkText = modelChosenIsInstalled
+    ? t("onboarding.step2.selected", { model: selectedModel })
+    : t("onboarding.step2.installed_list", {
+        list:
+          status.ollama.models.slice(0, 3).join(", ") +
+          (status.ollama.models.length > 3 ? "…" : ""),
+      });
 
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-2xl mx-auto px-8 py-10">
         <div className="text-center mb-8">
           <div className="text-3xl font-semibold tracking-tight">
-            Welcome to MailMind
+            {t("onboarding.welcome")}
           </div>
-          <p className="mt-2 text-sm text-muted">
-            Local-first email triage. Let's get the few pieces in place.
-            Everything below runs on your Mac — nothing leaves it.
-          </p>
+          <p className="mt-2 text-sm text-muted">{t("onboarding.subtitle")}</p>
         </div>
 
         {/* Step 1 — Ollama */}
         <Step
           number={1}
-          title="Ollama (local AI runtime)"
+          title={t("onboarding.step1.title")}
           ok={ollamaOk}
-          okText="Running on http://127.0.0.1:11434"
+          okText={t("onboarding.step1.ok")}
         >
           {!ollamaOk && (
             <>
               {!status.ollama.app_installed && !status.ollama.cli_installed && (
                 <>
                   <p className="text-sm text-muted">
-                    Ollama is what runs the language model on your Mac. It's a
-                    free, open-source app from <span className="font-mono">ollama.com</span>.
+                    {t("onboarding.step1.desc_missing")}
                   </p>
                   <Action onClick={installOllama}>
-                    Download Ollama (opens browser) →
+                    {t("onboarding.step1.btn_download")}
                   </Action>
-                  <p className="text-xs text-muted">
-                    After installing Ollama from the .dmg and opening it once,
-                    come back here and click <i>Re-check</i>.
-                  </p>
-                  <SecondaryButton onClick={refresh}>Re-check</SecondaryButton>
+                  <p className="text-xs text-muted">{t("onboarding.step1.hint")}</p>
+                  <SecondaryButton onClick={refresh}>{t("common.recheck")}</SecondaryButton>
                 </>
               )}
               {(status.ollama.app_installed || status.ollama.cli_installed) && (
                 <>
                   <p className="text-sm text-muted">
-                    Ollama is installed but the background service isn't running yet.
+                    {t("onboarding.step1.desc_stopped")}
                   </p>
                   <Action onClick={startOllama} disabled={busy === "ollama"}>
-                    {busy === "ollama" ? "Starting…" : "Start Ollama"}
+                    {busy === "ollama"
+                      ? t("onboarding.step1.starting")
+                      : t("onboarding.step1.btn_start")}
                   </Action>
                 </>
               )}
@@ -200,15 +202,9 @@ export function Onboarding({ onFinish }: Props) {
         {/* Step 2 — Model */}
         <Step
           number={2}
-          title="Pick a model and download it"
+          title={t("onboarding.step2.title")}
           ok={hasAnyModel}
-          okText={
-            modelChosenIsInstalled
-              ? `Selected: ${selectedModel}`
-              : `Installed: ${status.ollama.models.slice(0, 3).join(", ")}${
-                  status.ollama.models.length > 3 ? "…" : ""
-                }`
-          }
+          okText={step2OkText}
           disabled={!ollamaOk}
         >
           {ollamaOk && (
@@ -239,19 +235,22 @@ export function Onboarding({ onFinish }: Props) {
                           {m.label}
                           {m.recommended && (
                             <span className="text-[10px] bg-accent/20 text-accent rounded px-1.5 py-0.5">
-                              recommended
+                              {t("onboarding.step2.tag_recommended")}
                             </span>
                           )}
                           {installed && (
                             <span className="text-[10px] bg-green-500/20 text-green-400 rounded px-1.5 py-0.5">
-                              installed
+                              {t("onboarding.step2.tag_installed")}
                             </span>
                           )}
                           <span className="ml-auto text-[11px] text-muted">
                             {m.size}
                           </span>
                         </div>
-                        <div className="text-xs text-muted mt-0.5">{m.note}</div>
+                        <div className="text-xs text-muted mt-0.5">
+                          {/* Falls back to English-ish baked-in description if locale didn't define it. */}
+                          {t(m.noteKey)}
+                        </div>
                       </div>
                     </label>
                   );
@@ -261,14 +260,13 @@ export function Onboarding({ onFinish }: Props) {
               {!modelChosenIsInstalled && (
                 <Action onClick={pullModel} disabled={pull !== null && !pull.done}>
                   {pull && !pull.done
-                    ? "Downloading…"
-                    : `Download ${selectedModel}`}
+                    ? t("onboarding.step2.downloading")
+                    : t("onboarding.step2.btn_download", { model: selectedModel })}
                 </Action>
               )}
               {modelChosenIsInstalled && (
                 <p className="text-xs text-muted">
-                  ✓ {selectedModel} is already pulled. You can change models any
-                  time in Settings → Ollama.
+                  {t("onboarding.step2.already", { model: selectedModel })}
                 </p>
               )}
 
@@ -298,29 +296,30 @@ export function Onboarding({ onFinish }: Props) {
           )}
         </Step>
 
-        {/* Step 3 — Python (informational only) */}
+        {/* Step 3 — Python */}
         <Step
           number={3}
-          title="Python runtime"
+          title={t("onboarding.step3.title")}
           ok={pythonOk}
-          okText="Auto-configured in ~/Library/Application Support/MailMind"
+          okText={t("onboarding.step3.ok")}
         >
           {!pythonOk && (
             <>
               <p className="text-sm text-muted">
-                MailMind couldn't find a working Python 3. macOS usually ships
-                with one — if not, install it once via the official installer
-                or Homebrew.
+                {t("onboarding.step3.desc_missing")}
               </p>
-              <Action onClick={() => api.openExternal("https://www.python.org/downloads/macos/")}>
-                Download Python (opens browser) →
+              <Action
+                onClick={() =>
+                  api.openExternal("https://www.python.org/downloads/macos/")
+                }
+              >
+                {t("onboarding.step3.btn_download")}
               </Action>
-              <SecondaryButton onClick={refresh}>Re-check</SecondaryButton>
+              <SecondaryButton onClick={refresh}>{t("common.recheck")}</SecondaryButton>
             </>
           )}
         </Step>
 
-        {/* Footer */}
         <div className="mt-10 flex items-center gap-2">
           <button
             onClick={onFinish}
@@ -333,20 +332,20 @@ export function Onboarding({ onFinish }: Props) {
             )}
           >
             {status.imap_configured
-              ? "Open MailMind →"
-              : "Continue to email setup →"}
+              ? t("onboarding.btn_open_app")
+              : t("onboarding.btn_continue_email")}
           </button>
           <button
             onClick={onFinish}
             className="px-4 py-2 rounded-md text-sm text-muted hover:text-text"
           >
-            Skip for now
+            {t("common.skip")}
           </button>
           <button
             onClick={refresh}
             className="ml-auto px-3 py-2 rounded-md text-xs text-muted hover:text-text"
           >
-            Re-check status
+            {t("common.recheck_status")}
           </button>
         </div>
       </div>
@@ -392,9 +391,7 @@ function Step({
           )}
         </div>
       </header>
-      {!ok && children && (
-        <div className="px-4 py-3 space-y-2">{children}</div>
-      )}
+      {!ok && children && <div className="px-4 py-3 space-y-2">{children}</div>}
     </section>
   );
 }

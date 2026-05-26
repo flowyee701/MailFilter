@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { api } from "../lib/api";
+import { useT } from "../i18n";
 
 export function DigestView() {
+  const t = useT();
   const [body, setBody] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,17 +26,15 @@ export function DigestView() {
       <div className="max-w-2xl mx-auto px-8 py-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Morning digest</h1>
-            <p className="mt-1 text-sm text-muted">
-              A summary of the last 24 hours of mail.
-            </p>
+            <h1 className="text-2xl font-semibold">{t("digest.title")}</h1>
+            <p className="mt-1 text-sm text-muted">{t("digest.subtitle")}</p>
           </div>
           <button
             onClick={run}
             disabled={loading}
             className="px-4 py-2 rounded-md text-sm bg-accent text-white hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? "Generating…" : "Generate now"}
+            {loading ? t("common.generating") : t("common.generate_now")}
           </button>
         </div>
 
@@ -52,9 +52,7 @@ export function DigestView() {
 
         {!body && !loading && !error && (
           <div className="mt-12 text-sm text-muted text-center">
-            Click "Generate now" to produce a digest from the latest emails.
-            A digest is also generated automatically each morning at the hour
-            configured in Settings.
+            {t("digest.empty")}
           </div>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../i18n";
 
 interface Props {
   subject: string;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function DraftModal({ subject, to, body, onClose, onRegenerate }: Props) {
+  const t = useT();
   const [text, setText] = useState(body);
   const [busy, setBusy] = useState(false);
 
@@ -27,9 +29,9 @@ export function DraftModal({ subject, to, body, onClose, onRegenerate }: Props) 
       >
         <header className="px-5 py-3 border-b border-border flex items-center justify-between">
           <div>
-            <div className="text-sm font-semibold">Draft reply</div>
+            <div className="text-sm font-semibold">{t("draft.title")}</div>
             <div className="text-xs text-muted">
-              To: {to} · Re: {subject}
+              {t("draft.to_re", { to, subject })}
             </div>
           </div>
           <button onClick={onClose} className="text-muted hover:text-text text-lg">
@@ -55,20 +57,20 @@ export function DraftModal({ subject, to, body, onClose, onRegenerate }: Props) 
             }}
             className="px-3 py-1.5 rounded-md text-xs bg-panel2 text-text hover:bg-panel2/70 disabled:opacity-50"
           >
-            {busy ? "Regenerating…" : "Regenerate"}
+            {busy ? t("common.regenerating") : t("common.regenerate")}
           </button>
           <div className="flex-1" />
           <button
             onClick={copy}
             className="px-3 py-1.5 rounded-md text-xs bg-accent text-white hover:opacity-90"
           >
-            Copy to clipboard
+            {t("common.copy")}
           </button>
           <button
             onClick={onClose}
             className="px-3 py-1.5 rounded-md text-xs bg-panel2 text-text hover:bg-panel2/70"
           >
-            Close
+            {t("common.close")}
           </button>
         </footer>
       </div>

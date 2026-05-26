@@ -30,6 +30,8 @@ export interface Settings {
   model: string;
   digest_hour: number;
   retention_days: number;
+  /** UI language code: "en" | "ru" | "fr" | "de" | "zh" | "" (autodetect) */
+  language: string;
 }
 
 export interface SyncSummary {
@@ -70,9 +72,13 @@ export interface PullProgress {
   error: string | null;
 }
 
-export const CATEGORY_META: Record<Category, { label: string; icon: string; color: string }> = {
-  reply:     { label: "Requires reply", icon: "🔴", color: "text-reply" },
-  important: { label: "Important",      icon: "🟡", color: "text-important" },
-  event:     { label: "Events",         icon: "📅", color: "text-event" },
-  noise:     { label: "Noise",          icon: "🗑️", color: "text-noise" },
+/** Static metadata per category. `labelKey` is an i18n key — look it up with t(). */
+export const CATEGORY_META: Record<
+  Category,
+  { labelKey: string; icon: string; color: string }
+> = {
+  reply:     { labelKey: "category.reply",     icon: "🔴", color: "text-reply" },
+  important: { labelKey: "category.important", icon: "🟡", color: "text-important" },
+  event:     { labelKey: "category.event",     icon: "📅", color: "text-event" },
+  noise:     { labelKey: "category.noise",     icon: "🗑️", color: "text-noise" },
 };

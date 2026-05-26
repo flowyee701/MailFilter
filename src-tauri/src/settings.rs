@@ -26,6 +26,9 @@ pub struct Settings {
     pub digest_hour: u32,
     #[serde(default = "default_retention_days")]
     pub retention_days: u32,
+    /// UI language code: "en", "ru", "fr", "de", "zh". Empty/missing = autodetect on frontend.
+    #[serde(default)]
+    pub language: String,
 }
 
 fn default_mailbox() -> String { "INBOX".into() }
@@ -48,6 +51,7 @@ impl Settings {
             model: default_model(),
             digest_hour: default_digest_hour(),
             retention_days: default_retention_days(),
+            language: String::new(),
         }
     }
 }

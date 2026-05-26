@@ -1,6 +1,6 @@
 [package]
 name = "mailmind"
-version = "0.2.1"
+version = "0.3.0"
 description = "MailMind - smart corporate email filter"
 authors = ["you"]
 license = "MIT"

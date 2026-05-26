@@ -5,6 +5,7 @@ import { CATEGORY_META } from "../lib/types";
 import { EmailDetail } from "./EmailDetail";
 import clsx from "clsx";
 import { formatDistanceToNow } from "date-fns";
+import { useT } from "../i18n";
 
 interface Props {
   category: Category | "all";
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function Inbox({ category, onMutated }: Props) {
+  const t = useT();
   const [rows, setRows] = useState<EmailRow[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,7 +47,7 @@ export function Inbox({ category, onMutated }: Props) {
 
   const grouped = groupByCategory(rows);
   const headerLabel =
-    category === "all" ? "All mail" : CATEGORY_META[category].label;
+    category === "all" ? t("sidebar.all_mail") : t(CATEGORY_META[category].labelKey);
 
   return (
     <div className="flex h-full">
@@ -54,7 +56,7 @@ export function Inbox({ category, onMutated }: Props) {
           <div>
             <div className="text-sm font-semibold">{headerLabel}</div>
             <div className="text-xs text-muted">
-              {loading ? "Loading…" : `${rows.length} email(s)`}
+              {loading ? t("app.loading") : t("inbox.count", { n: rows.length })}
             </div>
           </div>
         </header>
@@ -84,7 +86,7 @@ export function Inbox({ category, onMutated }: Props) {
 
           {!loading && rows.length === 0 && (
             <div className="p-8 text-center text-sm text-muted">
-              No emails here. Try "Sync inbox" in the sidebar.
+              {t("inbox.empty")}
             </div>
           )}
         </div>
@@ -95,7 +97,7 @@ export function Inbox({ category, onMutated }: Props) {
           <EmailDetail id={selectedId} onMutated={handleMutated} />
         ) : (
           <div className="h-full flex items-center justify-center text-muted text-sm">
-            Select an email to view
+            {t("inbox.select_to_view")}
           </div>
         )}
       </section>
@@ -114,12 +116,13 @@ function CategoryGroup({
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) {
+  const t = useT();
   const meta = CATEGORY_META[category];
   return (
     <div>
       <div className="px-4 py-1.5 bg-panel/60 border-y border-border text-xs uppercase tracking-wider text-muted flex items-center gap-2 sticky top-0">
         <span>{meta.icon}</span>
-        <span>{meta.label}</span>
+        <span>{t(meta.labelKey)}</span>
         <span className="ml-auto text-[10px]">{rows.length}</span>
       </div>
       {rows.map((r) => (
@@ -143,6 +146,7 @@ function EmailRowItem({
   selected: boolean;
   onClick: () => void;
 }) {
+  const t = useT();
   const meta = CATEGORY_META[row.category];
   const fromLabel = row.from_name || row.from_addr;
   return (
@@ -164,7 +168,7 @@ function EmailRowItem({
       <div className="text-sm mt-0.5 truncate">{row.subject}</div>
       <div className="text-xs text-muted mt-0.5 line-clamp-2">{row.snippet}</div>
       {row.is_draft_generated && (
-        <div className="mt-1 text-[10px] text-accent">✓ draft ready</div>
+        <div className="mt-1 text-[10px] text-accent">{t("inbox.draft_ready")}</div>
       )}
     </button>
   );

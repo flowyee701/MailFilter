@@ -6,6 +6,7 @@ import { DigestView } from "./components/DigestView";
 import { Onboarding } from "./components/Onboarding";
 import { api } from "./lib/api";
 import type { Category, CategoryCounts } from "./lib/types";
+import { I18nProvider, useT, type Lang } from "./i18n";
 
 export type View =
   | { kind: "inbox"; category: Category | "all" }
@@ -15,6 +16,62 @@ export type View =
 type Boot = "checking" | "onboarding" | "ready";
 
 export default function App() {
+  // Load the user's stored language preference before mounting the rest of the
+  // UI, so the first frame is in the right language. While that round-trip is
+  // in flight we show a tiny "starting" splash.
+  const [initialLang, setInitialLang] = useState<Lang | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await api.loadSettings();
+        const code = (s.language || "").toLowerCase();
+        const valid: Lang[] = ["en", "ru", "fr", "de", "zh"];
+        const lang = (valid as string[]).includes(code) ? (code as Lang) : null;
+        setInitialLang(lang ?? detectFromBrowser());
+      } catch {
+        setInitialLang(detectFromBrowser());
+      }
+    })();
+  }, []);
+
+  if (!initialLang) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-bg text-muted text-sm">
+        Starting…
+      </div>
+    );
+  }
+
+  return (
+    <I18nProvider
+      initialLang={initialLang}
+      onLangChange={async (next) => {
+        // Persist immediately on every change.
+        try {
+          const s = await api.loadSettings();
+          await api.saveSettings({ ...s, language: next, password: undefined });
+        } catch (e) {
+          console.error("failed to persist language", e);
+        }
+      }}
+    >
+      <AppInner />
+    </I18nProvider>
+  );
+}
+
+function detectFromBrowser(): Lang {
+  const raw = (typeof navigator !== "undefined" ? navigator.language : "en").toLowerCase();
+  if (raw.startsWith("ru")) return "ru";
+  if (raw.startsWith("fr")) return "fr";
+  if (raw.startsWith("de")) return "de";
+  if (raw.startsWith("zh")) return "zh";
+  return "en";
+}
+
+function AppInner() {
+  const t = useT();
   const [boot, setBoot] = useState<Boot>("checking");
   const [view, setView] = useState<View>({ kind: "inbox", category: "reply" });
   const [counts, setCounts] = useState<CategoryCounts>({
@@ -26,18 +83,14 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncMsg, setLastSyncMsg] = useState<string>("");
 
-  // First-boot setup check: show Onboarding when something's missing.
   useEffect(() => {
     (async () => {
       try {
         const s = await api.setupStatus();
-        const needsOnboarding =
-          !s.ollama.running ||
-          s.ollama.models.length === 0 ||
-          !s.python_ok;
-        setBoot(needsOnboarding ? "onboarding" : "ready");
+        const needs =
+          !s.ollama.running || s.ollama.models.length === 0 || !s.python_ok;
+        setBoot(needs ? "onboarding" : "ready");
       } catch {
-        // Something went wrong; show the onboarding so the user has a path forward.
         setBoot("onboarding");
       }
     })();
@@ -57,25 +110,28 @@ export default function App() {
 
   const doSync = useCallback(async () => {
     setSyncing(true);
-    setLastSyncMsg("Syncing…");
+    setLastSyncMsg(t("sidebar.syncing"));
     try {
       const r = await api.syncInbox();
-      setLastSyncMsg(
-        `Fetched ${r.fetched}, new ${r.new}, classified ${r.classified}` +
-          (r.errors.length ? `, ${r.errors.length} error(s)` : ""),
-      );
+      let msg = t("sidebar.sync_result", {
+        fetched: r.fetched,
+        n: r.new,
+        c: r.classified,
+      });
+      if (r.errors.length) msg += t("sidebar.sync_errors", { n: r.errors.length });
+      setLastSyncMsg(msg);
       await refreshCounts();
     } catch (e) {
-      setLastSyncMsg(`Sync failed: ${String(e)}`);
+      setLastSyncMsg(t("sidebar.sync_failed", { err: String(e) }));
     } finally {
       setSyncing(false);
     }
-  }, [refreshCounts]);
+  }, [refreshCounts, t]);
 
   if (boot === "checking") {
     return (
       <div className="flex h-full w-full items-center justify-center bg-bg text-muted text-sm">
-        Starting…
+        {t("app.starting")}
       </div>
     );
   }
@@ -85,8 +141,6 @@ export default function App() {
       <div className="flex h-full w-full bg-bg text-text">
         <Onboarding
           onFinish={async () => {
-            // After onboarding, drop into Settings if email isn't configured yet,
-            // otherwise straight to the inbox.
             try {
               const s = await api.setupStatus();
               setView(
