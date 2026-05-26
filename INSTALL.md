@@ -41,36 +41,48 @@ You'll need:
 
 ## Step 3 — Open it the first time (one-time security consent)
 
-MailMind is open-source and not signed with a paid Apple Developer
-certificate, so the first launch needs your explicit consent. **This only
-happens once.**
+MailMind is open-source and not Apple-notarized (notarization needs a paid
+Apple Developer Program account at $99/year), so macOS Gatekeeper needs
+your explicit consent the first time. **This happens once per version.**
+
+**Recent macOS shows one of two dialogs. Both are normal.**
+
+### Variant A — *"MailMind cannot be opened because the developer cannot be verified"*
+
+This is the friendly one.
 
 1. Open **Finder** → **Applications**.
 2. **Right-click** (or hold Control and click) on **MailMind**.
 3. Choose **Open** from the menu.
-4. A dialog appears saying *"MailMind cannot be opened because the
-   developer cannot be verified."* — click **Open**.
-5. macOS now remembers that you approve this app. From now on you can
-   launch it normally — Dock, Launchpad, Spotlight, double-click, anything.
+4. Click **Open** in the dialog. macOS remembers your approval forever.
 
-<details>
-<summary>What if I see "MailMind is damaged and can't be opened"?</summary>
+### Variant B — *"MailMind is damaged and can't be opened. You should move it to the Bin."*
 
-That's a stricter Gatekeeper variant (recent macOS versions sometimes show
-it). One Terminal command clears it permanently:
+> ⚠️ **Do NOT click "Move to Bin".** The app isn't damaged — macOS is just
+> flagging it because Safari tagged the download as "from the internet" and
+> the binary isn't notarized. Click **Cancel** instead.
 
-1. Open **Terminal** (⌘-Space → type "Terminal" → Enter).
-2. Paste this exact line and press Enter:
+Then run **one** Terminal command to remove Safari's quarantine tag:
 
+1. Open **Terminal** (`⌘-Space` → type "Terminal" → Enter).
+2. Paste exactly:
    ```bash
    xattr -dr com.apple.quarantine /Applications/MailMind.app
    ```
+3. Press Enter. Close Terminal.
+4. Double-click MailMind in Applications — it opens normally now.
 
-3. Close Terminal. Double-click MailMind in Applications — it opens normally now.
+This is the only Terminal command you should ever need. Run it once per
+download; macOS won't ask again until you replace the app with a new
+version.
 
-This is the only Terminal command you should ever need.
-
-</details>
+> **Why does this happen?** Safari tags every downloaded file with a
+> `com.apple.quarantine` attribute. For Apple-notarized apps, macOS happily
+> checks Apple's servers and clears the tag. For un-notarized open-source
+> apps like MailMind, it doesn't — and on recent macOS the result is the
+> misleading "damaged" dialog. The `xattr` command removes the tag manually.
+> Apple Mail and any signed commercial app skip this because they pay for
+> notarization. We don't.
 
 ## Step 4 — Run the built-in setup wizard
 
